@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchActiveTournaments } from '../lib/mockDb';
+import { fetchActiveTournaments } from '../lib/db';
 import { useLoading } from '../contexts/LoadingContext';
 import { formatEventDate } from '../lib/format';
 import type { TournamentWithCount } from '../types';

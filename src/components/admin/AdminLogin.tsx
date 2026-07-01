@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const SESSION_KEY = 'shibano_admin_auth';
-const ADMIN_PASSWORD = 'demo';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? 'demo';
 
 export function isAdminAuthenticated(): boolean {
   return sessionStorage.getItem(SESSION_KEY) === 'ok';
@@ -45,7 +45,6 @@ export function AdminLogin({ onLogin }: Props) {
               autoFocus
             />
             {error && <span className="error-msg">パスワードが違います</span>}
-            <span className="form-hint">デモ用パスワード: demo</span>
           </div>
           <button type="submit" className="btn-next">ログイン</button>
         </form>

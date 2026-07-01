@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   fetchAllTournaments, createTournament, updateTournament,
   setTournamentActive, deleteTournament,
-} from '../../lib/mockDb';
+} from '../../lib/db';
 import { formatEventDate } from '../../lib/format';
 import type { TournamentWithCount } from '../../types';
 

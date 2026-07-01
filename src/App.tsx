@@ -9,7 +9,7 @@ import { Confirmation } from './components/Confirmation';
 import { Complete } from './components/Complete';
 import { AdminPage } from './components/admin/AdminPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { createEntry, fetchUserProfile, saveUserProfile, fetchUserEntry } from './lib/mockDb';
+import { createEntry, fetchUserProfile, saveUserProfile, fetchUserEntry } from './lib/db';
 import { IS_MOCK_LIFF } from './lib/liff';
 import type { Step, EntryState, TournamentWithCount, UserProfile } from './types';
 
