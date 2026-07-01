@@ -3,7 +3,7 @@
 // mockDb と同じシグネチャを提供し、呼び出し側は差し替え不要。
 // ============================================================
 import { supabase } from './supabase';
-import type { Tournament, TournamentWithCount, Entry, UserProfile } from '../types';
+import type { Tournament, TournamentWithCount, Entry } from '../types';
 
 // DB の row（description は null を取りうる）
 type TournamentRow = Omit<Tournament, 'description'> & { description: string | null };
@@ -33,31 +33,6 @@ async function withCounts(rows: TournamentRow[]): Promise<TournamentWithCount[]>
     ...toTournament(row),
     confirmed_count: counts.get(row.id) ?? 0,
   }));
-}
-
-// ── ユーザープロフィール ─────────────────────────────────────
-export async function fetchUserProfile(lineUserId: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('line_user_id', lineUserId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as UserProfile | null;
-}
-
-export async function saveUserProfile(profile: Omit<UserProfile, 'created_at'>): Promise<void> {
-  const { error } = await supabase
-    .from('user_profiles')
-    .upsert(
-      {
-        line_user_id: profile.line_user_id,
-        full_name: profile.full_name,
-        phone: profile.phone,
-      },
-      { onConflict: 'line_user_id' },
-    );
-  if (error) throw new Error(error.message);
 }
 
 // ── 大会 ────────────────────────────────────────────────────
@@ -138,6 +113,7 @@ export interface CreateEntryParams {
   lineUserId: string;
   teamName: string;
   representativeName: string;
+  phone: string;
 }
 
 export async function createEntry(params: CreateEntryParams): Promise<Entry> {
@@ -182,6 +158,7 @@ export async function createEntry(params: CreateEntryParams): Promise<Entry> {
       line_user_id: params.lineUserId,
       team_name: params.teamName.trim(),
       representative_name: params.representativeName.trim(),
+      phone: params.phone.trim(),
       status: 'confirmed',
     })
     .select()
@@ -196,7 +173,7 @@ export async function createEntry(params: CreateEntryParams): Promise<Entry> {
   return entry as Entry;
 }
 
-export async function fetchEntries(tournamentId: string): Promise<(Entry & { phone?: string })[]> {
+export async function fetchEntries(tournamentId: string): Promise<Entry[]> {
   const { data: entries, error } = await supabase
     .from('entries')
     .select('*')
@@ -204,20 +181,7 @@ export async function fetchEntries(tournamentId: string): Promise<(Entry & { pho
     .neq('status', 'cancelled')
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
-
-  const rows = (entries ?? []) as Entry[];
-  if (rows.length === 0) return [];
-
-  // プロフィールから電話番号を付与
-  const userIds = [...new Set(rows.map(e => e.line_user_id))];
-  const { data: profiles, error: pError } = await supabase
-    .from('user_profiles')
-    .select('line_user_id, phone')
-    .in('line_user_id', userIds);
-  if (pError) throw new Error(pError.message);
-
-  const phoneMap = new Map((profiles ?? []).map(p => [p.line_user_id, p.phone]));
-  return rows.map(e => ({ ...e, phone: phoneMap.get(e.line_user_id) }));
+  return (entries ?? []) as Entry[];
 }
 
 // ユーザーの既存エントリーを年度で確認（ユーザー向け表示用）

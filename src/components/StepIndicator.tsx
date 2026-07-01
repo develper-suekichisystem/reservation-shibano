@@ -7,9 +7,8 @@ const STEPS: { key: Step; label: string }[] = [
   { key: 'complete',   label: '完了' },
 ];
 
-// profile ステップは tournament と同じ位置として扱う
 const STEP_INDEX: Record<Step, number> = {
-  profile: 0, tournament: 0, form: 1, confirm: 2, complete: 3,
+  tournament: 0, form: 1, confirm: 2, complete: 3,
 };
 
 interface Props {

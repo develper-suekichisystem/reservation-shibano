@@ -2,45 +2,40 @@ import { useState } from 'react';
 import { useLoading } from './contexts/LoadingContext';
 import { useLiff } from './hooks/useLiff';
 import { StepIndicator } from './components/StepIndicator';
-import { ProfileForm } from './components/ProfileForm';
 import { TournamentSelect } from './components/TournamentSelect';
 import { EntryForm } from './components/EntryForm';
 import { Confirmation } from './components/Confirmation';
 import { Complete } from './components/Complete';
 import { AdminPage } from './components/admin/AdminPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { createEntry, fetchUserProfile, saveUserProfile, fetchUserEntry } from './lib/db';
+import { createEntry, fetchUserEntry } from './lib/db';
 import { IS_MOCK_LIFF } from './lib/liff';
-import type { Step, EntryState, TournamentWithCount, UserProfile } from './types';
+import type { Step, EntryState, TournamentWithCount } from './types';
 
 const INITIAL_STATE: EntryState = {
   selectedTournament: null,
   teamName: '',
   representativeName: '',
+  phone: '',
 };
 
 function EntryApp() {
   const { isReady, isLoggedIn, userId, displayName, pictureUrl, error } = useLiff();
   const { withLoading } = useLoading();
-  const [step, setStep] = useState<Step>('profile');
+  const [step, setStep] = useState<Step>('tournament');
   const [state, setState] = useState<EntryState>(INITIAL_STATE);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [enteredFiscalYear, setEnteredFiscalYear] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [completedId, setCompletedId] = useState('');
-  const [profileSaving, setProfileSaving] = useState(false);
-  // LIFF 準備完了後、プロフィール・既存エントリーを確認（一度だけ実行）
+  // LIFF 準備完了後、既存エントリーを確認（一度だけ実行）
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const [initialized, setInitialized] = useState(false);
   if (isReady && isLoggedIn && userId && !initialized) {
     setInitialized(true);
     Promise.resolve().then(() => withLoading(async () => {
-      const profile = await fetchUserProfile(userId);
-      setUserProfile(profile);
       const currentYear = String(new Date().getFullYear());
       const existing = await fetchUserEntry(userId, currentYear);
       if (existing) setEnteredFiscalYear(existing.fiscal_year);
-      setStep(profile ? 'tournament' : 'profile');
     }));
   }
 
@@ -52,16 +47,6 @@ function EntryApp() {
 
   function update(updates: Partial<EntryState>) {
     setState(prev => ({ ...prev, ...updates }));
-  }
-
-  async function handleProfileSave(fullName: string, phone: string) {
-    setProfileSaving(true);
-    await withLoading(async () => {
-      await saveUserProfile({ line_user_id: userId!, full_name: fullName, phone });
-      setUserProfile({ line_user_id: userId!, full_name: fullName, phone, created_at: new Date().toISOString() });
-      setStep('tournament');
-    });
-    setProfileSaving(false);
   }
 
   function handleTournamentSelect(tournament: TournamentWithCount) {
@@ -81,6 +66,7 @@ function EntryApp() {
         lineUserId: userId!,
         teamName: state.teamName,
         representativeName: state.representativeName,
+        phone: state.phone,
       });
 
       if (!IS_MOCK_LIFF) {
@@ -115,7 +101,7 @@ function EntryApp() {
     setStep('tournament');
   }
 
-  const showStepIndicator = step !== 'complete' && step !== 'profile';
+  const showStepIndicator = step !== 'complete';
 
   return (
     <div className="app">
@@ -127,9 +113,6 @@ function EntryApp() {
       {showStepIndicator && <StepIndicator currentStep={step} />}
 
       <main className="app-main">
-        {step === 'profile' && (
-          <ProfileForm onSave={handleProfileSave} saving={profileSaving} />
-        )}
         {step === 'tournament' && (
           <TournamentSelect
             lineUserId={userId}
@@ -161,12 +144,6 @@ function EntryApp() {
           <Complete entryId={completedId} onRestart={restart} />
         )}
       </main>
-
-      {userProfile && step === 'tournament' && (
-        <div className="user-info-bar">
-          登録名: {userProfile.full_name}　{userProfile.phone}
-        </div>
-      )}
     </div>
   );
 }

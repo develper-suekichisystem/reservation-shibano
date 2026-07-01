@@ -43,6 +43,10 @@ export function Confirmation({ state, displayName, pictureUrl, onConfirm, onBack
           <span className="confirm-value">{state.representativeName}</span>
         </div>
         <div className="confirm-row">
+          <span className="confirm-label">電話番号</span>
+          <span className="confirm-value">{state.phone}</span>
+        </div>
+        <div className="confirm-row">
           <span className="confirm-label">申込者</span>
           <span className="confirm-value confirm-value-profile">
             {pictureUrl && (

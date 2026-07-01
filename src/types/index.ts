@@ -23,22 +23,17 @@ export interface Entry {
   line_user_id: string;
   team_name: string;
   representative_name: string;
+  phone: string;
   status: EntryStatus;
   created_at: string;
   tournament?: Tournament;
-}
-
-export interface UserProfile {
-  line_user_id: string;
-  full_name: string;
-  phone: string;
-  created_at: string;
 }
 
 export interface EntryState {
   selectedTournament: TournamentWithCount | null;
   teamName: string;
   representativeName: string;
+  phone: string;
 }
 
-export type Step = 'profile' | 'tournament' | 'form' | 'confirm' | 'complete';
+export type Step = 'tournament' | 'form' | 'confirm' | 'complete';

@@ -19,17 +19,8 @@ CREATE TABLE tournaments (
 );
 
 -- ============================================================
--- user_profiles（LINE連携ユーザーのプロフィール）
--- ============================================================
-CREATE TABLE user_profiles (
-  line_user_id TEXT        PRIMARY KEY,
-  full_name    TEXT        NOT NULL,
-  phone        TEXT        NOT NULL,
-  created_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================================
 -- entries（エントリー）
+-- 代表者名・電話番号はエントリーごとに毎回入力する
 -- ============================================================
 CREATE TABLE entries (
   id                  UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -38,6 +29,7 @@ CREATE TABLE entries (
   line_user_id        TEXT        NOT NULL,
   team_name           TEXT        NOT NULL,
   representative_name TEXT        NOT NULL,
+  phone               TEXT        NOT NULL,
   status              TEXT        DEFAULT 'confirmed'
                                   CHECK (status IN ('confirmed', 'cancelled')),
   created_at          TIMESTAMPTZ DEFAULT NOW()
@@ -54,13 +46,11 @@ CREATE UNIQUE INDEX entries_one_per_year_idx
 -- ============================================================
 -- Row Level Security
 -- ============================================================
-ALTER TABLE tournaments   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE entries       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entries     ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "tournaments_all"   ON tournaments   FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "user_profiles_all" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "entries_all"       ON entries       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "tournaments_all" ON tournaments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "entries_all"     ON entries     FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- 初期データ（大会サンプル）— 必要に応じて編集してください

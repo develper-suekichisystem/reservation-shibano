@@ -14,12 +14,19 @@ interface Props {
 interface Errors {
   teamName?: string;
   representativeName?: string;
+  phone?: string;
 }
 
 function validate(state: EntryState): Errors {
   const errors: Errors = {};
   if (!state.teamName.trim()) errors.teamName = 'チーム名を入力してください';
   if (!state.representativeName.trim()) errors.representativeName = '代表者名を入力してください';
+  const digits = state.phone.replace(/[-ー‐\s]/g, '');
+  if (!digits) {
+    errors.phone = '電話番号を入力してください';
+  } else if (!/^0\d{9,10}$/.test(digits)) {
+    errors.phone = '電話番号の形式が正しくありません（例: 090-1234-5678）';
+  }
   return errors;
 }
 
@@ -81,6 +88,19 @@ export function EntryForm({ state, displayName, pictureUrl, onChange, onNext, on
           onChange={e => onChange({ representativeName: e.target.value })}
         />
         {errors.representativeName && <span className="error-msg">{errors.representativeName}</span>}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">電話番号 <span className="required">*</span></label>
+        <input
+          className={`form-input${errors.phone ? ' error' : ''}`}
+          type="tel"
+          placeholder="090-1234-5678"
+          value={state.phone}
+          onChange={e => onChange({ phone: e.target.value })}
+        />
+        {errors.phone && <span className="error-msg">{errors.phone}</span>}
+        <p className="form-hint">緊急連絡等にのみ使用します。</p>
       </div>
 
       <div className="btn-group">
