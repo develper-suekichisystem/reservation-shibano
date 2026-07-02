@@ -16,9 +16,6 @@ export function Complete({ entryId, onRestart }: Props) {
       <p className="complete-note">
         キャンセルの場合はLINEよりご連絡ください。
       </p>
-      <p className="demo-note">
-        ※ こちらはデモです。実際のエントリーは登録されません。
-      </p>
       <button className="btn-back" onClick={onRestart}>最初の画面に戻る</button>
     </div>
   );

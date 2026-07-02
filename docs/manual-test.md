@@ -9,16 +9,16 @@
 
 ## 0. 事前準備
 
-- [ ] Supabase に `supabase/schema.sql`（および `migrations/0001_entry_phone.sql`）適用済み
-- [ ] `entries` テーブルに `phone` カラムがある / `user_profiles` テーブルが無い
-- [ ] `.env`（またはVercel環境変数）が設定済み
+- [x] Supabase に `supabase/schema.sql`（および `migrations/0001_entry_phone.sql`）適用済み
+- [x] `entries` テーブルに `phone` カラムがある / `user_profiles` テーブルが無い
+- [x] `.env`（またはVercel環境変数）が設定済み
   - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
   - `VITE_LIFF_ID`
   - `VITE_ADMIN_PASSWORD`
   - `LINE_CHANNEL_ACCESS_TOKEN`
   - `ADMIN_LINE_USER_ID`（自分への通知を試すなら必須）
   - `CRON_SECRET`
-- [ ] `npm run build` がエラーなく通る
+- [x] `npm run build` がエラーなく通る
 
 > テスト用データを事前投入したい場合は、管理画面（§4）で開催日を調整した大会を作ると楽。
 > 受付期限テスト用に「開催7日以上先」「開催6日以内」の大会を1件ずつ用意しておく。
@@ -27,9 +27,9 @@
 
 ## 1. 起動・LIFF
 
-- [ ] LINEアプリからLIFF URLを開くと、プロフィール登録画面が**出ずに**いきなり「大会を選択」画面が表示される
-- [ ] ヘッダーが「ONE UP」でテーマカラーが**ピンク**になっている
-- [ ] （ローカル確認用）`VITE_LIFF_ID` 未設定 or `mock` の場合、ダミーユーザーで大会選択画面まで進める
+- [x] LINEアプリからLIFF URLを開くと、プロフィール登録画面が**出ずに**いきなり「大会を選択」画面が表示される
+- [x] ヘッダーが「ONE UP」でテーマカラーが**ピンク**になっている
+- [x] （ローカル確認用）`VITE_LIFF_ID` 未設定 or `mock` の場合、ダミーユーザーで大会選択画面まで進める
 
 ---
 
