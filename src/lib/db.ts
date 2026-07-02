@@ -3,6 +3,7 @@
 // mockDb と同じシグネチャを提供し、呼び出し側は差し替え不要。
 // ============================================================
 import { supabase } from './supabase';
+import { isEntryOpen, ENTRY_DEADLINE_DAYS } from './format';
 import type { Tournament, TournamentWithCount, Entry } from '../types';
 
 // DB の row（description は null を取りうる）
@@ -120,11 +121,16 @@ export async function createEntry(params: CreateEntryParams): Promise<Entry> {
   // 大会の存在・定員を取得
   const { data: tournament, error: tError } = await supabase
     .from('tournaments')
-    .select('id, capacity')
+    .select('id, capacity, event_date')
     .eq('id', params.tournamentId)
     .maybeSingle();
   if (tError) throw new Error(tError.message);
   if (!tournament) throw new Error('大会が見つかりません');
+
+  // 受付期限チェック（開催 ENTRY_DEADLINE_DAYS 日前まで）
+  if (!isEntryOpen(tournament.event_date)) {
+    throw new Error(`この大会は受付を終了しました（開催${ENTRY_DEADLINE_DAYS}日前まで）。`);
+  }
 
   // 同一年度に既にエントリー済みか確認
   const { data: existing, error: eError } = await supabase

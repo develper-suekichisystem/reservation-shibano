@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchActiveTournaments } from '../lib/db';
 import { useLoading } from '../contexts/LoadingContext';
-import { formatEventDate } from '../lib/format';
+import { formatEventDate, isEntryOpen, ENTRY_DEADLINE_DAYS } from '../lib/format';
 import type { TournamentWithCount } from '../types';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 
 function statusBadge(t: TournamentWithCount, isEnteredYear: boolean) {
   if (isEnteredYear) return <span className="badge badge-entered">エントリー済み年度</span>;
+  if (!isEntryOpen(t.event_date)) return <span className="badge badge-full">受付終了</span>;
   const remaining = t.capacity - t.confirmed_count;
   if (remaining <= 0) return <span className="badge badge-full">満員</span>;
   if (remaining <= 2) return <span className="badge badge-few">残り{remaining}枠</span>;
@@ -60,7 +61,8 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
             {grouped.get(year)!.map(t => {
               const isFull = t.confirmed_count >= t.capacity;
               const isEnteredYear = enteredFiscalYear === t.fiscal_year;
-              const disabled = isFull || isEnteredYear;
+              const isClosed = !isEntryOpen(t.event_date);
+              const disabled = isFull || isEnteredYear || isClosed;
 
               return (
                 <button
@@ -81,7 +83,12 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
                   {t.description && (
                     <div className="tournament-desc">{t.description}</div>
                   )}
-                  {isFull && !isEnteredYear && (
+                  {isClosed && !isEnteredYear && (
+                    <div className="tournament-full-note">
+                      この大会は受付を終了しました（開催{ENTRY_DEADLINE_DAYS}日前まで）。
+                    </div>
+                  )}
+                  {isFull && !isClosed && !isEnteredYear && (
                     <div className="tournament-full-note">
                       この大会は出場枠が埋まっています。
                     </div>
