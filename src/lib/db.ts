@@ -83,9 +83,11 @@ export async function createTournament(payload: TournamentPayload): Promise<void
 }
 
 export async function updateTournament(id: string, payload: TournamentPayload): Promise<void> {
+  // 年度(fiscal_year)は作成後に変更不可。既存エントリーの年度と不整合になるため更新対象から除外する。
+  const { fiscal_year: _fiscalYear, ...updatable } = payload;
   const { error } = await supabase
     .from('tournaments')
-    .update(payload)
+    .update(updatable)
     .eq('id', id);
   if (error) throw new Error(error.message);
 }

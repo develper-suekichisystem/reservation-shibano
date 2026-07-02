@@ -168,7 +168,11 @@ export function TournamentAdmin() {
                   value={form.fiscal_year}
                   onChange={e => setForm(f => ({ ...f, fiscal_year: e.target.value }))}
                   placeholder="2026"
+                  disabled={!!editing}
                 />
+                {editing && (
+                  <p className="form-hint">年度は作成後に変更できません。</p>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">出場枠（チーム数）</label>
