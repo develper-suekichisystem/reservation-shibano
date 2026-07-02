@@ -7,6 +7,7 @@ import { EntryForm } from './components/EntryForm';
 import { Confirmation } from './components/Confirmation';
 import { Complete } from './components/Complete';
 import { AdminPage } from './components/admin/AdminPage';
+import { WhoAmI } from './components/WhoAmI';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { createEntry, fetchUserEntry } from './lib/db';
 import { IS_MOCK_LIFF } from './lib/liff';
@@ -150,5 +151,6 @@ function EntryApp() {
 
 export default function App() {
   if (window.location.pathname === '/admin') return <AdminPage />;
+  if (window.location.pathname === '/whoami') return <WhoAmI />;
   return <EntryApp />;
 }
