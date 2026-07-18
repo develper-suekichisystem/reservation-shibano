@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchActiveTournaments } from '../lib/db';
 import { useLoading } from '../contexts/LoadingContext';
-import { formatEventDate, isEntryOpen, ENTRY_DEADLINE_DAYS } from '../lib/format';
+import { formatEventDate, isEntryOpen, ENTRY_DEADLINE_DAYS, daysUntilEvent } from '../lib/format';
 import type { TournamentWithCount } from '../types';
 
 interface Props {
@@ -19,13 +19,24 @@ function statusBadge(t: TournamentWithCount, isEnteredYear: boolean) {
   return <span className="badge badge-open">受付中</span>;
 }
 
-// 年度ごとにグループ化
+// 直近開催される大会順（未開催を近い順で先頭、開催済みは後方）
+function byUpcoming(a: TournamentWithCount, b: TournamentWithCount): number {
+  const da = daysUntilEvent(a.event_date);
+  const db = daysUntilEvent(b.event_date);
+  const aUpcoming = da >= 0;
+  const bUpcoming = db >= 0;
+  if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+  return aUpcoming ? da - db : db - da;
+}
+
+// 年度ごとにグループ化（各年度内は直近開催順に並べる）
 function groupByFiscalYear(tournaments: TournamentWithCount[]): Map<string, TournamentWithCount[]> {
   const map = new Map<string, TournamentWithCount[]>();
   for (const t of tournaments) {
     if (!map.has(t.fiscal_year)) map.set(t.fiscal_year, []);
     map.get(t.fiscal_year)!.push(t);
   }
+  for (const list of map.values()) list.sort(byUpcoming);
   return map;
 }
 
@@ -35,7 +46,9 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
 
   useEffect(() => {
     withLoading(async () => {
-      setTournaments(await fetchActiveTournaments());
+      const list = await fetchActiveTournaments();
+      // 終了した大会（開催日が過ぎたもの）は参加者一覧に表示しない
+      setTournaments(list.filter(t => daysUntilEvent(t.event_date) >= 0));
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

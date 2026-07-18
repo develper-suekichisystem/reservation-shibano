@@ -7,6 +7,7 @@ type EntryWithPhone = Entry & { phone?: string };
 
 export function EntryAdmin() {
   const [tournaments, setTournaments] = useState<TournamentWithCount[]>([]);
+  const [selectedYear, setSelectedYear] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [entries, setEntries] = useState<EntryWithPhone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +16,12 @@ export function EntryAdmin() {
     (async () => {
       const list = await fetchAllTournaments();
       setTournaments(list);
-      if (list.length > 0) setSelectedId(prev => prev || list[0].id);
+      if (list.length > 0) {
+        const latestYear = list
+          .map(t => t.fiscal_year)
+          .sort((a, b) => b.localeCompare(a))[0];
+        setSelectedYear(prev => prev || latestYear);
+      }
       setLoading(false);
     })();
   }, []);
@@ -44,16 +50,37 @@ export function EntryAdmin() {
 
   const selected = tournaments.find(t => t.id === selectedId);
 
-  // 年度ごとにセレクト表示
+  // 年度ごとにグループ化
   const grouped = new Map<string, TournamentWithCount[]>();
   for (const t of tournaments) {
     if (!grouped.has(t.fiscal_year)) grouped.set(t.fiscal_year, []);
     grouped.get(t.fiscal_year)!.push(t);
   }
   const years = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
+  const yearTournaments = grouped.get(selectedYear) ?? [];
+
+  // 年度を変更したら、その年度の大会未選択なら選択をリセット
+  function handleYearChange(year: string) {
+    setSelectedYear(year);
+    setSelectedId('');
+    setEntries([]);
+  }
 
   return (
     <div className="entry-admin">
+      <div className="admin-date-picker">
+        <label>年度：</label>
+        <select
+          className="admin-select"
+          value={selectedYear}
+          onChange={e => handleYearChange(e.target.value)}
+        >
+          {years.map(year => (
+            <option key={year} value={year}>{year}年度</option>
+          ))}
+        </select>
+      </div>
+
       <div className="admin-date-picker">
         <label>大会：</label>
         <select
@@ -61,18 +88,18 @@ export function EntryAdmin() {
           value={selectedId}
           onChange={e => setSelectedId(e.target.value)}
         >
-          {years.map(year => (
-            <optgroup key={year} label={`${year}年度`}>
-              {grouped.get(year)!.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name}（{t.event_date.replace(/-/g, '/')}）
-                </option>
-              ))}
-            </optgroup>
+          <option value="">選択してください</option>
+          {yearTournaments.map(t => (
+            <option key={t.id} value={t.id}>
+              {t.name}（{t.event_date.replace(/-/g, '/')}）
+            </option>
           ))}
         </select>
       </div>
 
+      {!selectedId ? (
+        <p className="no-data">大会を選択するとエントリーを確認できます</p>
+      ) : (<>
       {selected && (
         <div className="entry-summary">
           <span>{formatEventDate(selected.event_date)}　{selected.venue}</span>
@@ -103,6 +130,7 @@ export function EntryAdmin() {
           ))}
         </div>
       )}
+      </>)}
     </div>
   );
 }

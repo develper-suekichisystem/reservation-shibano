@@ -327,6 +327,27 @@ body {
   border-radius: 20px; font-weight: 600;
 }
 .complete-note { font-size: 13px; color: var(--gray-400); line-height: 1.7; }
+
+/* エントリー完了後の運営者LINE追加案内 */
+.organizer-line {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 20px 16px;
+  background: rgba(6, 199, 85, 0.08);
+  border: 1px solid rgba(6, 199, 85, 0.35);
+  border-radius: 12px;
+}
+.organizer-line-title { font-size: 15px; font-weight: 700; color: var(--gray-800); }
+.organizer-line-message { font-size: 13px; color: var(--gray-600); line-height: 1.7; }
+.btn-line-add {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; box-sizing: border-box;
+  background: #06c755; color: var(--white);
+  border: none; border-radius: 10px; padding: 14px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  text-decoration: none; transition: background 0.15s;
+}
+.btn-line-add:hover { background: #05b34c; }
 .demo-note {
   font-size: 12px; color: var(--gray-400);
   background: var(--gray-100); padding: 8px 16px; border-radius: 8px;
