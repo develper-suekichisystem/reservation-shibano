@@ -41,6 +41,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const formattedDate = eventDate.replace(/-/g, '/');
   const shortId = entryId.slice(0, 8).toUpperCase();
 
+  const organizerLineUrl = process.env.ORGANIZER_LINE_URL;
+  const organizerSection = organizerLineUrl
+    ? `
+
+大会運営者のLINEを追加してください。
+大会の連絡・当日のご案内は運営者の個人LINEで行います。
+▼友だち追加はこちら
+${organizerLineUrl}`
+    : '';
+
   const userMsg = `【エントリー受付】
 
 ${representativeName} 様
@@ -55,6 +65,7 @@ ${representativeName} 様
 チーム：${teamName}
 受付番号：${shortId}
 ━━━━━━━━━━━━━━
+${organizerSection}
 
 キャンセルの場合はLINEよりご連絡ください。`;
 
