@@ -358,15 +358,6 @@ body {
   border: 1px solid var(--gray-200); border-radius: 10px; cursor: pointer;
 }
 .organizer-check input { width: 18px; height: 18px; flex-shrink: 0; }
-
-/* 確認画面の運営者LINEリマインド */
-.organizer-reminder {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 16px; margin-bottom: 16px;
-  background: rgba(6, 199, 85, 0.08);
-  border: 1px solid rgba(6, 199, 85, 0.35); border-radius: 12px;
-}
-.organizer-reminder-text { font-size: 13px; color: var(--gray-600); line-height: 1.7; }
 .demo-note {
   font-size: 12px; color: var(--gray-400);
   background: var(--gray-100); padding: 8px 16px; border-radius: 8px;
