@@ -1,26 +1,28 @@
 import type { Step } from '../types';
+import { ORGANIZER_LINE_URL } from '../lib/organizer';
 
-const STEPS: { key: Step; label: string }[] = [
+const ALL_STEPS: { key: Step; label: string }[] = [
   { key: 'tournament', label: '大会選択' },
+  { key: 'line',       label: 'LINE登録' },
   { key: 'form',       label: '入力' },
   { key: 'confirm',    label: '確認' },
   { key: 'complete',   label: '完了' },
 ];
-
-const STEP_INDEX: Record<Step, number> = {
-  tournament: 0, form: 1, confirm: 2, complete: 3,
-};
 
 interface Props {
   currentStep: Step;
 }
 
 export function StepIndicator({ currentStep }: Props) {
-  const currentIndex = STEP_INDEX[currentStep];
+  // 運営者LINE未設定なら LINE 登録ステップは表示しない
+  const steps = ORGANIZER_LINE_URL
+    ? ALL_STEPS
+    : ALL_STEPS.filter(s => s.key !== 'line');
+  const currentIndex = steps.findIndex(s => s.key === currentStep);
 
   return (
     <div className="step-indicator">
-      {STEPS.map((step, index) => (
+      {steps.map((step, index) => (
         <div
           key={step.key}
           className={`step-item ${index < currentIndex ? 'completed' : ''} ${index === currentIndex ? 'active' : ''}`}

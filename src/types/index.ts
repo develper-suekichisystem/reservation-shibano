@@ -36,4 +36,4 @@ export interface EntryState {
   phone: string;
 }
 
-export type Step = 'tournament' | 'form' | 'confirm' | 'complete';
+export type Step = 'tournament' | 'line' | 'form' | 'confirm' | 'complete';

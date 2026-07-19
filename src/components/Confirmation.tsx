@@ -1,4 +1,5 @@
 import { formatEventDate } from '../lib/format';
+import { ORGANIZER_LINE_URL } from '../lib/organizer';
 import type { EntryState } from '../types';
 
 interface Props {
@@ -56,6 +57,23 @@ export function Confirmation({ state, displayName, pictureUrl, onConfirm, onBack
           </span>
         </div>
       </div>
+
+      {ORGANIZER_LINE_URL && (
+        <div className="organizer-reminder">
+          <p className="organizer-reminder-text">
+            大会運営者のLINE追加はお済みですか？<br />
+            まだの場合は、こちらから友だち追加をお願いします。
+          </p>
+          <a
+            className="btn-line-add"
+            href={ORGANIZER_LINE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            運営者LINEを追加する
+          </a>
+        </div>
+      )}
 
       <p className="confirm-note">上記内容でよろしければエントリーを確定してください。</p>
       <div className="btn-group">

@@ -3,6 +3,7 @@ import { useLoading } from './contexts/LoadingContext';
 import { useLiff } from './hooks/useLiff';
 import { StepIndicator } from './components/StepIndicator';
 import { TournamentSelect } from './components/TournamentSelect';
+import { OrganizerLine } from './components/OrganizerLine';
 import { EntryForm } from './components/EntryForm';
 import { Confirmation } from './components/Confirmation';
 import { Complete } from './components/Complete';
@@ -11,6 +12,7 @@ import { WhoAmI } from './components/WhoAmI';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { createEntry, fetchUserEntry } from './lib/db';
 import { IS_MOCK_LIFF } from './lib/liff';
+import { ORGANIZER_LINE_URL } from './lib/organizer';
 import type { Step, EntryState, TournamentWithCount } from './types';
 
 const INITIAL_STATE: EntryState = {
@@ -52,7 +54,8 @@ function EntryApp() {
 
   function handleTournamentSelect(tournament: TournamentWithCount) {
     update({ selectedTournament: tournament });
-    setStep('form');
+    // 運営者LINEが設定されていれば、先にLINE登録ステップを挟む
+    setStep(ORGANIZER_LINE_URL ? 'line' : 'form');
   }
 
   async function handleConfirm() {
@@ -121,6 +124,12 @@ function EntryApp() {
             onSelect={handleTournamentSelect}
           />
         )}
+        {step === 'line' && (
+          <OrganizerLine
+            onNext={() => setStep('form')}
+            onBack={() => setStep('tournament')}
+          />
+        )}
         {step === 'form' && (
           <EntryForm
             state={state}
@@ -128,7 +137,7 @@ function EntryApp() {
             pictureUrl={pictureUrl}
             onChange={update}
             onNext={() => setStep('confirm')}
-            onBack={() => setStep('tournament')}
+            onBack={() => setStep(ORGANIZER_LINE_URL ? 'line' : 'tournament')}
           />
         )}
         {step === 'confirm' && (

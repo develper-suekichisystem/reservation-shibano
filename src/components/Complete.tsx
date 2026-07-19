@@ -1,5 +1,4 @@
-// 大会運営者の個人LINE友だち追加URL（アプリ共通・環境変数で設定）
-const ORGANIZER_LINE_URL = import.meta.env.VITE_ORGANIZER_LINE_URL as string | undefined;
+import { ORGANIZER_LINE_URL } from '../lib/organizer';
 
 interface Props {
   entryId: string;
