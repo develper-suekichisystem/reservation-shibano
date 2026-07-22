@@ -11,6 +11,7 @@ export function EntryAdmin() {
   const [selectedId, setSelectedId] = useState('');
   const [entries, setEntries] = useState<EntryWithPhone[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +47,33 @@ export function EntryAdmin() {
     if (!confirm(`「${entry.team_name}」のエントリーをキャンセルしますか？`)) return;
     await cancelEntry(entry.id);
     await refresh();
+  }
+
+  async function handleSendNames() {
+    if (!selected) return;
+    const names = entries.map(e => e.line_display_name?.trim() || '（LINE名未取得）');
+    if (names.length === 0) {
+      alert('送信するエントリーがありません');
+      return;
+    }
+    if (!confirm(`「${selected.name}」のエントリー者 ${names.length}名のLINE表示名を、管理者の個人LINEへ送信しますか？`)) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/send-names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentName: selected.name, names }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `送信に失敗しました（${res.status}）`);
+      }
+      alert(`${names.length}名のLINE表示名を送信しました。`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '送信に失敗しました');
+    } finally {
+      setSending(false);
+    }
   }
 
   const selected = tournaments.find(t => t.id === selectedId);
@@ -121,6 +149,7 @@ export function EntryAdmin() {
               <div className="admin-info">
                 <div className="admin-name">{e.team_name}</div>
                 <div className="admin-menu">代表: {e.representative_name}</div>
+                <div className="admin-menu">LINE: {e.line_display_name?.trim() || '（未取得）'}</div>
                 {e.phone && <div className="admin-contact">{e.phone}</div>}
               </div>
               <button className="btn-cancel" onClick={() => handleCancel(e)}>
@@ -129,6 +158,16 @@ export function EntryAdmin() {
             </div>
           ))}
         </div>
+      )}
+
+      {entries.length > 0 && (
+        <button
+          className="btn-send-names"
+          onClick={handleSendNames}
+          disabled={sending}
+        >
+          {sending ? '送信中...' : `LINE表示名を一括送信（${entries.length}名）`}
+        </button>
       )}
       </>)}
     </div>

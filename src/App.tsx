@@ -68,6 +68,7 @@ function EntryApp() {
         tournamentId: tournament.id,
         fiscalYear: tournament.fiscal_year,
         lineUserId: userId!,
+        lineDisplayName: displayName,
         teamName: state.teamName,
         representativeName: state.representativeName,
         phone: state.phone,
@@ -85,6 +86,7 @@ function EntryApp() {
             venue: tournament.venue,
             teamName: entry.team_name,
             representativeName: entry.representative_name,
+            lineDisplayName: entry.line_display_name,
             entryId: entry.id,
           }),
         }).catch(console.error);

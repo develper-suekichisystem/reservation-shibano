@@ -10,6 +10,7 @@ interface NotifyPayload {
   venue: string;
   teamName: string;
   representativeName: string;
+  lineDisplayName?: string | null;
   entryId: string;
 }
 
@@ -35,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const {
     userId, tournamentName, fiscalYear, eventDate, venue,
-    teamName, representativeName, entryId,
+    teamName, representativeName, lineDisplayName, entryId,
   } = req.body as NotifyPayload;
 
   const formattedDate = eventDate.replace(/-/g, '/');
@@ -74,6 +75,7 @@ ${organizerSection}
 大　会：${tournamentName}（${fiscalYear}年度 / ${formattedDate}）
 チーム：${teamName}
 代表者：${representativeName}
+LINE名：${lineDisplayName ?? '（未取得）'}
 受付番号：${shortId}`;
 
   try {
