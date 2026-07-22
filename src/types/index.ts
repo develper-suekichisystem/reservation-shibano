@@ -21,6 +21,7 @@ export interface Entry {
   tournament_id: string;
   fiscal_year: string;
   line_user_id: string;
+  line_display_name: string | null;
   team_name: string;
   representative_name: string;
   phone: string;

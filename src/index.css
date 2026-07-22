@@ -494,6 +494,15 @@ body {
 }
 .btn-cancel:hover { background: #fef2f2; }
 
+.btn-send-names {
+  display: block; margin: 4px 16px 8px; width: calc(100% - 32px);
+  background: var(--primary); border: none; color: var(--white);
+  border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: opacity 0.15s;
+}
+.btn-send-names:hover:not(:disabled) { opacity: 0.9; }
+.btn-send-names:disabled { opacity: 0.5; cursor: default; }
+
 .admin-footer {
   padding: 24px 16px 40px; display: flex; justify-content: center;
 }

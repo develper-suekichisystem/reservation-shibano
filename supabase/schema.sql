@@ -27,6 +27,7 @@ CREATE TABLE entries (
   tournament_id       UUID        REFERENCES tournaments(id) ON DELETE CASCADE NOT NULL,
   fiscal_year         TEXT        NOT NULL,
   line_user_id        TEXT        NOT NULL,
+  line_display_name   TEXT,
   team_name           TEXT        NOT NULL,
   representative_name TEXT        NOT NULL,
   phone               TEXT        NOT NULL,

@@ -114,6 +114,7 @@ export interface CreateEntryParams {
   tournamentId: string;
   fiscalYear: string;
   lineUserId: string;
+  lineDisplayName: string | null;
   teamName: string;
   representativeName: string;
   phone: string;
@@ -164,6 +165,7 @@ export async function createEntry(params: CreateEntryParams): Promise<Entry> {
       tournament_id: params.tournamentId,
       fiscal_year: params.fiscalYear,
       line_user_id: params.lineUserId,
+      line_display_name: params.lineDisplayName,
       team_name: params.teamName.trim(),
       representative_name: params.representativeName.trim(),
       phone: params.phone.trim(),
