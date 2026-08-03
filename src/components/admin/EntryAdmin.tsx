@@ -51,7 +51,10 @@ export function EntryAdmin() {
 
   async function handleSendNames() {
     if (!selected) return;
-    const names = entries.map(e => e.line_display_name?.trim() || '（LINE名未取得）');
+    const names = entries.map((e, i) => {
+      const lineName = e.line_display_name?.trim() || 'LINE名未取得';
+      return `${i + 1} ${e.team_name}（${e.representative_name} ${lineName}）`;
+    });
     if (names.length === 0) {
       alert('送信するエントリーがありません');
       return;

@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // LINE テキストは 5000 文字上限。表示名一覧が長い場合は分割送信する。
-  const header = `【エントリー者一覧】\n${tournamentName}\n（${names.length}名）`;
+  const header = `【エントリー者一覧】\n${tournamentName}\n（${names.length}チーム）`;
   const chunks: string[] = [];
   let buf = header;
   for (const name of names) {
