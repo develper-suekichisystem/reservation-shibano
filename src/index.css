@@ -503,6 +503,13 @@ body {
 .btn-send-names:hover:not(:disabled) { opacity: 0.9; }
 .btn-send-names:disabled { opacity: 0.5; cursor: default; }
 
+.admin-entry-add {
+  display: flex; gap: 8px; align-items: center; margin: 4px 16px 12px;
+}
+.admin-entry-add .form-input { flex: 1; margin: 0; }
+.admin-entry-add .btn-add { white-space: nowrap; }
+.admin-entry-add .btn-add:disabled { opacity: 0.5; cursor: default; }
+
 .admin-footer {
   padding: 24px 16px 40px; display: flex; justify-content: center;
 }

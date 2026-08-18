@@ -3,7 +3,7 @@
 // mockDb と同じシグネチャを提供し、呼び出し側は差し替え不要。
 // ============================================================
 import { supabase } from './supabase';
-import { isEntryOpen, ENTRY_DEADLINE_DAYS } from './format';
+import { entryPeriodStatus, entryStartAt, formatDateTime } from './format';
 import type { Tournament, TournamentWithCount, Entry } from '../types';
 
 // DB の row（description は null を取りうる）
@@ -63,6 +63,9 @@ export interface TournamentPayload {
   venue: string;
   capacity: number;
   description: string | null;
+  entry_start_at: string | null;
+  entry_end_at: string | null;
+  entry_limit_enabled: boolean;
   is_active: boolean;
 }
 
@@ -110,9 +113,36 @@ export async function deleteTournament(id: string): Promise<void> {
 }
 
 // ── エントリー ──────────────────────────────────────────────
+
+// 受付期間・定員を検証し、大会行を返す（共通処理）
+async function loadOpenTournament(tournamentId: string) {
+  const { data: tournament, error: tError } = await supabase
+    .from('tournaments')
+    .select('id, capacity, event_date, entry_start_at, entry_end_at, entry_limit_enabled, fiscal_year')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (tError) throw new Error(tError.message);
+  if (!tournament) throw new Error('大会が見つかりません');
+  return tournament as Pick<
+    Tournament,
+    'id' | 'capacity' | 'event_date' | 'entry_start_at' | 'entry_end_at' | 'entry_limit_enabled' | 'fiscal_year'
+  >;
+}
+
+async function assertCapacityAvailable(tournamentId: string, capacity: number): Promise<void> {
+  const { count, error } = await supabase
+    .from('entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentId)
+    .eq('status', 'confirmed');
+  if (error) throw new Error(error.message);
+  if ((count ?? 0) >= capacity) {
+    throw new Error('この大会は定員に達しています。');
+  }
+}
+
 export interface CreateEntryParams {
   tournamentId: string;
-  fiscalYear: string;
   lineUserId: string;
   lineDisplayName: string | null;
   teamName: string;
@@ -121,49 +151,53 @@ export interface CreateEntryParams {
 }
 
 export async function createEntry(params: CreateEntryParams): Promise<Entry> {
-  // 大会の存在・定員を取得
-  const { data: tournament, error: tError } = await supabase
-    .from('tournaments')
-    .select('id, capacity, event_date')
-    .eq('id', params.tournamentId)
-    .maybeSingle();
-  if (tError) throw new Error(tError.message);
-  if (!tournament) throw new Error('大会が見つかりません');
+  const tournament = await loadOpenTournament(params.tournamentId);
 
-  // 受付期限チェック（開催 ENTRY_DEADLINE_DAYS 日前まで）
-  if (!isEntryOpen(tournament.event_date)) {
-    throw new Error(`この大会は受付を終了しました（開催${ENTRY_DEADLINE_DAYS}日前まで）。`);
+  // 受付期間チェック
+  const status = entryPeriodStatus(tournament);
+  if (status === 'before') {
+    const start = entryStartAt(tournament)!;
+    throw new Error(`この大会の受付開始は ${formatDateTime(start.toISOString())} からです。`);
+  }
+  if (status === 'closed') {
+    throw new Error('この大会は受付を終了しました。');
   }
 
-  // 同一年度に既にエントリー済みか確認
-  const { data: existing, error: eError } = await supabase
+  // エントリー制限ONの大会のみ年度を記録し、同一年度の重複を禁止する
+  const fiscalYear = tournament.entry_limit_enabled ? tournament.fiscal_year : null;
+  if (fiscalYear) {
+    const { data: existing, error: eError } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('fiscal_year', fiscalYear)
+      .eq('line_user_id', params.lineUserId)
+      .eq('status', 'confirmed')
+      .maybeSingle();
+    if (eError) throw new Error(eError.message);
+    if (existing) {
+      throw new Error(`${fiscalYear}年度の大会には既にエントリー済みです。
+1つの年度につき1大会のみご参加いただけます。`);
+    }
+  }
+
+  // 同一大会の重複エントリーを禁止
+  const { data: sameTournament, error: stError } = await supabase
     .from('entries')
     .select('id')
-    .eq('fiscal_year', params.fiscalYear)
+    .eq('tournament_id', params.tournamentId)
     .eq('line_user_id', params.lineUserId)
     .eq('status', 'confirmed')
     .maybeSingle();
-  if (eError) throw new Error(eError.message);
-  if (existing) {
-    throw new Error(`${params.fiscalYear}年度の大会には既にエントリー済みです。\n1つの年度につき1大会のみご参加いただけます。`);
-  }
+  if (stError) throw new Error(stError.message);
+  if (sameTournament) throw new Error('この大会には既にエントリー済みです。');
 
-  // 定員チェック（キャンセル待ちなし）
-  const { count, error: cError } = await supabase
-    .from('entries')
-    .select('id', { count: 'exact', head: true })
-    .eq('tournament_id', params.tournamentId)
-    .eq('status', 'confirmed');
-  if (cError) throw new Error(cError.message);
-  if ((count ?? 0) >= tournament.capacity) {
-    throw new Error('この大会は定員に達しています。');
-  }
+  await assertCapacityAvailable(params.tournamentId, tournament.capacity);
 
   const { data: entry, error: insertError } = await supabase
     .from('entries')
     .insert({
       tournament_id: params.tournamentId,
-      fiscal_year: params.fiscalYear,
+      fiscal_year: fiscalYear,
       line_user_id: params.lineUserId,
       line_display_name: params.lineDisplayName,
       team_name: params.teamName.trim(),
@@ -174,12 +208,41 @@ export async function createEntry(params: CreateEntryParams): Promise<Entry> {
     .select()
     .single();
   if (insertError) {
-    // 一意制約（同一年度重複）に引っかかった場合
+    // 一意制約（年度重複 / 同一大会重複）に引っかかった場合
     if (insertError.code === '23505') {
-      throw new Error(`${params.fiscalYear}年度の大会には既にエントリー済みです。`);
+      throw new Error(fiscalYear
+        ? `${fiscalYear}年度の大会には既にエントリー済みです。`
+        : 'この大会には既にエントリー済みです。');
     }
     throw new Error(insertError.message);
   }
+  return entry as Entry;
+}
+
+// 管理者によるエントリー登録（チーム名のみ）
+// LINEアカウントに紐づかないため、定員のみカウントし年度制限の対象外とする。
+export async function createAdminEntry(tournamentId: string, teamName: string): Promise<Entry> {
+  const name = teamName.trim();
+  if (!name) throw new Error('チーム名を入力してください');
+
+  const tournament = await loadOpenTournament(tournamentId);
+  await assertCapacityAvailable(tournamentId, tournament.capacity);
+
+  const { data: entry, error } = await supabase
+    .from('entries')
+    .insert({
+      tournament_id: tournamentId,
+      fiscal_year: null,
+      line_user_id: null,
+      line_display_name: null,
+      team_name: name,
+      representative_name: null,
+      phone: null,
+      status: 'confirmed',
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
   return entry as Entry;
 }
 
@@ -194,26 +257,21 @@ export async function fetchEntries(tournamentId: string): Promise<Entry[]> {
   return (entries ?? []) as Entry[];
 }
 
-// ユーザーの既存エントリーを年度で確認（ユーザー向け表示用）
-export async function fetchUserEntry(
+// ユーザーの確定済みエントリー一覧（ユーザー側の制限判定・表示用）
+export async function fetchUserEntries(
   lineUserId: string,
-  fiscalYear: string,
-): Promise<(Entry & { tournament?: Tournament }) | null> {
+): Promise<(Entry & { tournament?: Tournament })[]> {
   const { data, error } = await supabase
     .from('entries')
     .select('*, tournament:tournaments(*)')
     .eq('line_user_id', lineUserId)
-    .eq('fiscal_year', fiscalYear)
-    .eq('status', 'confirmed')
-    .maybeSingle();
+    .eq('status', 'confirmed');
   if (error) throw new Error(error.message);
-  if (!data) return null;
 
-  const { tournament, ...entry } = data as Entry & { tournament: TournamentRow | null };
-  return {
-    ...entry,
-    tournament: tournament ? toTournament(tournament) : undefined,
-  };
+  return ((data ?? []) as (Entry & { tournament: TournamentRow | null })[]).map(row => {
+    const { tournament, ...entry } = row;
+    return { ...entry, tournament: tournament ? toTournament(tournament) : undefined };
+  });
 }
 
 export async function cancelEntry(id: string): Promise<void> {

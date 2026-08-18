@@ -10,7 +10,7 @@ import { Complete } from './components/Complete';
 import { AdminPage } from './components/admin/AdminPage';
 import { WhoAmI } from './components/WhoAmI';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { createEntry, fetchUserEntry } from './lib/db';
+import { createEntry, fetchUserEntries } from './lib/db';
 import { IS_MOCK_LIFF } from './lib/liff';
 import { ORGANIZER_LINE_URL } from './lib/organizer';
 import type { Step, EntryState, TournamentWithCount } from './types';
@@ -27,7 +27,10 @@ function EntryApp() {
   const { withLoading } = useLoading();
   const [step, setStep] = useState<Step>('tournament');
   const [state, setState] = useState<EntryState>(INITIAL_STATE);
-  const [enteredFiscalYear, setEnteredFiscalYear] = useState<string | null>(null);
+  // エントリー制限ONの大会でエントリー済みの年度
+  const [enteredFiscalYears, setEnteredFiscalYears] = useState<string[]>([]);
+  // エントリー済みの大会ID（制限の有無に関わらず1大会1エントリー）
+  const [enteredTournamentIds, setEnteredTournamentIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [completedId, setCompletedId] = useState('');
   // LIFF 準備完了後、既存エントリーを確認（一度だけ実行）
@@ -36,9 +39,9 @@ function EntryApp() {
   if (isReady && isLoggedIn && userId && !initialized) {
     setInitialized(true);
     Promise.resolve().then(() => withLoading(async () => {
-      const currentYear = String(new Date().getFullYear());
-      const existing = await fetchUserEntry(userId, currentYear);
-      if (existing) setEnteredFiscalYear(existing.fiscal_year);
+      const entries = await fetchUserEntries(userId);
+      setEnteredFiscalYears(entries.map(e => e.fiscal_year).filter((y): y is string => !!y));
+      setEnteredTournamentIds(entries.map(e => e.tournament_id));
     }));
   }
 
@@ -66,7 +69,6 @@ function EntryApp() {
     await withLoading(async () => { try {
       const entry = await createEntry({
         tournamentId: tournament.id,
-        fiscalYear: tournament.fiscal_year,
         lineUserId: userId!,
         lineDisplayName: displayName,
         teamName: state.teamName,
@@ -122,7 +124,8 @@ function EntryApp() {
         {step === 'tournament' && (
           <TournamentSelect
             lineUserId={userId}
-            enteredFiscalYear={enteredFiscalYear}
+            enteredFiscalYears={enteredFiscalYears}
+            enteredTournamentIds={enteredTournamentIds}
             onSelect={handleTournamentSelect}
           />
         )}

@@ -3,7 +3,10 @@ import {
   fetchAllTournaments, createTournament, updateTournament,
   setTournamentActive, deleteTournament,
 } from '../../lib/db';
-import { formatEventDate } from '../../lib/format';
+import {
+  formatEventDate, formatDateTime, entryEndAt,
+  toDateTimeLocalValue, fromDateTimeLocalValue,
+} from '../../lib/format';
 import type { TournamentWithCount } from '../../types';
 
 const CURRENT_YEAR = String(new Date().getFullYear());
@@ -15,6 +18,9 @@ const EMPTY_FORM = {
   venue: '',
   capacity: '16',
   description: '',
+  entry_start_at: '',      // datetime-local 値。空 = 即時エントリー可能
+  entry_end_at: '',        // datetime-local 値。空 = 開催日の1週間前まで
+  entry_limit_enabled: true,
   is_active: true,
 };
 
@@ -49,6 +55,9 @@ export function TournamentAdmin() {
       venue: t.venue,
       capacity: String(t.capacity),
       description: t.description ?? '',
+      entry_start_at: toDateTimeLocalValue(t.entry_start_at),
+      entry_end_at: toDateTimeLocalValue(t.entry_end_at),
+      entry_limit_enabled: t.entry_limit_enabled,
       is_active: t.is_active,
     });
     setShowForm(true);
@@ -70,6 +79,9 @@ export function TournamentAdmin() {
       venue: form.venue.trim(),
       capacity: parseInt(form.capacity) || 16,
       description: form.description.trim() || null,
+      entry_start_at: fromDateTimeLocalValue(form.entry_start_at),
+      entry_end_at: fromDateTimeLocalValue(form.entry_end_at),
+      entry_limit_enabled: form.entry_limit_enabled,
       is_active: form.is_active,
     };
     if (editing) {
@@ -120,6 +132,14 @@ export function TournamentAdmin() {
                   <div className="menu-admin-name">{t.name}</div>
                   <div className="menu-admin-duration">
                     {formatEventDate(t.event_date)}　{t.venue}
+                  </div>
+                  <div className="menu-admin-duration">
+                    受付 {t.entry_start_at ? formatDateTime(t.entry_start_at) : '即時'}
+                    　〜 {formatDateTime(entryEndAt(t).toISOString())}
+                    {t.entry_end_at ? '' : '（開催1週間前）'}
+                  </div>
+                  <div className="menu-admin-duration">
+                    エントリー制限：{t.entry_limit_enabled ? 'あり（年度内1エントリー）' : 'なし'}
                   </div>
                   <div className={`menu-admin-price${t.confirmed_count >= t.capacity ? ' full' : ''}`}>
                     申込 {t.confirmed_count}/{t.capacity}チーム
@@ -204,6 +224,44 @@ export function TournamentAdmin() {
                 onChange={e => setForm(f => ({ ...f, venue: e.target.value }))}
                 placeholder="市民総合体育館"
               />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">エントリー開始日時</label>
+                <input
+                  className="form-input"
+                  type="datetime-local"
+                  value={form.entry_start_at}
+                  onChange={e => setForm(f => ({ ...f, entry_start_at: e.target.value }))}
+                />
+                <p className="form-hint">未設定の場合はすぐにエントリー可能です。</p>
+              </div>
+              <div className="form-group">
+                <label className="form-label">エントリー終了日時</label>
+                <input
+                  className="form-input"
+                  type="datetime-local"
+                  value={form.entry_end_at}
+                  onChange={e => setForm(f => ({ ...f, entry_end_at: e.target.value }))}
+                />
+                <p className="form-hint">未設定の場合は開催日の1週間前までです。</p>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label-check">
+                <input
+                  type="checkbox"
+                  checked={form.entry_limit_enabled}
+                  onChange={e => setForm(f => ({ ...f, entry_limit_enabled: e.target.checked }))}
+                />
+                エントリー制限をかける（同一年度は1アカウント1エントリー）
+              </label>
+              <p className="form-hint">
+                オフの場合は、この大会に1アカウント1エントリーの制限のみが適用され、
+                他の大会には制限なくエントリーできます。
+              </p>
             </div>
 
             <div className="form-group">

@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
 import { fetchActiveTournaments } from '../lib/db';
 import { useLoading } from '../contexts/LoadingContext';
-import { formatEventDate, isEntryOpen, ENTRY_DEADLINE_DAYS, daysUntilEvent } from '../lib/format';
+import {
+  formatEventDate, formatDateTime, entryPeriodStatus, entryStartAt, entryEndAt, daysUntilEvent,
+} from '../lib/format';
 import type { TournamentWithCount } from '../types';
 
 interface Props {
   lineUserId: string;
-  enteredFiscalYear: string | null; // 既にエントリー済みの年度
+  enteredFiscalYears: string[];    // 制限ONの大会でエントリー済みの年度
+  enteredTournamentIds: string[];  // エントリー済みの大会ID
   onSelect: (tournament: TournamentWithCount) => void;
 }
 
-function statusBadge(t: TournamentWithCount, isEnteredYear: boolean) {
+function statusBadge(t: TournamentWithCount, isEnteredYear: boolean, isEntered: boolean) {
+  if (isEntered) return <span className="badge badge-entered">エントリー済み</span>;
   if (isEnteredYear) return <span className="badge badge-entered">エントリー済み年度</span>;
-  if (!isEntryOpen(t.event_date)) return <span className="badge badge-full">受付終了</span>;
+  const period = entryPeriodStatus(t);
+  if (period === 'before') return <span className="badge badge-few">受付開始前</span>;
+  if (period === 'closed') return <span className="badge badge-full">受付終了</span>;
   const remaining = t.capacity - t.confirmed_count;
   if (remaining <= 0) return <span className="badge badge-full">満員</span>;
   if (remaining <= 2) return <span className="badge badge-few">残り{remaining}枠</span>;
@@ -40,7 +46,9 @@ function groupByFiscalYear(tournaments: TournamentWithCount[]): Map<string, Tour
   return map;
 }
 
-export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, onSelect }: Props) {
+export function TournamentSelect({
+  lineUserId: _lineUserId, enteredFiscalYears, enteredTournamentIds, onSelect,
+}: Props) {
   const [tournaments, setTournaments] = useState<TournamentWithCount[]>([]);
   const { withLoading } = useLoading();
 
@@ -60,9 +68,9 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
     <div className="tournament-select">
       <h2 className="section-title">大会を選択</h2>
 
-      {enteredFiscalYear && (
+      {enteredFiscalYears.length > 0 && (
         <div className="year-notice">
-          ℹ️ {enteredFiscalYear}年度の大会には既にエントリー済みです。
+          ℹ️ {enteredFiscalYears.join('・')}年度の大会には既にエントリー済みです。
           他の年度の大会をお選びください。
         </div>
       )}
@@ -73,9 +81,14 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
           <div className="tournament-list">
             {grouped.get(year)!.map(t => {
               const isFull = t.confirmed_count >= t.capacity;
-              const isEnteredYear = enteredFiscalYear === t.fiscal_year;
-              const isClosed = !isEntryOpen(t.event_date);
-              const disabled = isFull || isEnteredYear || isClosed;
+              const isEntered = enteredTournamentIds.includes(t.id);
+              // 年度制限は「制限ONの大会」のみ適用
+              const isEnteredYear = t.entry_limit_enabled
+                && !isEntered
+                && enteredFiscalYears.includes(t.fiscal_year);
+              const period = entryPeriodStatus(t);
+              const isOpen = period === 'open';
+              const disabled = isFull || isEntered || isEnteredYear || !isOpen;
 
               return (
                 <button
@@ -86,22 +99,29 @@ export function TournamentSelect({ lineUserId: _lineUserId, enteredFiscalYear, o
                 >
                   <div className="tournament-header">
                     <span className="tournament-name">{t.name}</span>
-                    {statusBadge(t, isEnteredYear)}
+                    {statusBadge(t, isEnteredYear, isEntered)}
                   </div>
                   <div className="tournament-meta">
                     <span>📅 {formatEventDate(t.event_date)}</span>
                     <span>📍 {t.venue}</span>
                     <span>👥 出場枠 {t.capacity}チーム（申込 {t.confirmed_count}チーム）</span>
+                    <span>📝 受付 {t.entry_start_at ? formatDateTime(t.entry_start_at) : '受付中'}
+                      　〜 {formatDateTime(entryEndAt(t).toISOString())}</span>
                   </div>
                   {t.description && (
                     <div className="tournament-desc">{t.description}</div>
                   )}
-                  {isClosed && !isEnteredYear && (
+                  {period === 'before' && !isEntered && !isEnteredYear && (
                     <div className="tournament-full-note">
-                      この大会は受付を終了しました（開催{ENTRY_DEADLINE_DAYS}日前まで）。
+                      この大会の受付開始は {formatDateTime(entryStartAt(t)!.toISOString())} からです。
                     </div>
                   )}
-                  {isFull && !isClosed && !isEnteredYear && (
+                  {period === 'closed' && !isEntered && !isEnteredYear && (
+                    <div className="tournament-full-note">
+                      この大会は受付を終了しました。
+                    </div>
+                  )}
+                  {isFull && isOpen && !isEntered && !isEnteredYear && (
                     <div className="tournament-full-note">
                       この大会は出場枠が埋まっています。
                     </div>

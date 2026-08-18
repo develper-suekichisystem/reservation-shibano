@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
-import { fetchAllTournaments, fetchEntries, cancelEntry } from '../../lib/db';
+import { fetchAllTournaments, fetchEntries, cancelEntry, createAdminEntry } from '../../lib/db';
 import { formatEventDate } from '../../lib/format';
 import type { TournamentWithCount, Entry } from '../../types';
-
-type EntryWithPhone = Entry & { phone?: string };
 
 export function EntryAdmin() {
   const [tournaments, setTournaments] = useState<TournamentWithCount[]>([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedId, setSelectedId] = useState('');
-  const [entries, setEntries] = useState<EntryWithPhone[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,7 +34,7 @@ export function EntryAdmin() {
 
   async function loadEntries(tournamentId: string) {
     setLoading(true);
-    setEntries(await fetchEntries(tournamentId) as EntryWithPhone[]);
+    setEntries(await fetchEntries(tournamentId));
     setLoading(false);
   }
 
@@ -43,7 +43,22 @@ export function EntryAdmin() {
     await loadEntries(selectedId);
   }
 
-  async function handleCancel(entry: EntryWithPhone) {
+  async function handleAdd() {
+    const name = newTeamName.trim();
+    if (!name || !selectedId) return;
+    setAdding(true);
+    try {
+      await createAdminEntry(selectedId, name);
+      setNewTeamName('');
+      await refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'エントリーの登録に失敗しました');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleCancel(entry: Entry) {
     if (!confirm(`「${entry.team_name}」のエントリーをキャンセルしますか？`)) return;
     await cancelEntry(entry.id);
     await refresh();
@@ -52,8 +67,10 @@ export function EntryAdmin() {
   async function handleSendNames() {
     if (!selected) return;
     const names = entries.map((e, i) => {
-      const lineName = e.line_display_name?.trim() || 'LINE名未取得';
-      return `${i + 1} ${e.team_name}（${e.representative_name} ${lineName}）`;
+      // 管理者登録（代表者名・LINE名なし）はチーム名のみ
+      const detail = [e.representative_name?.trim(), e.line_display_name?.trim()]
+        .filter(Boolean).join(' ');
+      return detail ? `${i + 1} ${e.team_name}（${detail}）` : `${i + 1} ${e.team_name}`;
     });
     if (names.length === 0) {
       alert('送信するエントリーがありません');
@@ -140,6 +157,19 @@ export function EntryAdmin() {
         </div>
       )}
 
+      <div className="admin-entry-add">
+        <input
+          className="form-input"
+          value={newTeamName}
+          onChange={e => setNewTeamName(e.target.value)}
+          placeholder="チーム名を入力して追加"
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+        />
+        <button className="btn-add" onClick={handleAdd} disabled={adding || !newTeamName.trim()}>
+          {adding ? '追加中...' : '＋ 追加'}
+        </button>
+      </div>
+
       {loading ? (
         <div className="loading">読み込み中...</div>
       ) : entries.length === 0 ? (
@@ -151,8 +181,12 @@ export function EntryAdmin() {
               <div className="admin-time">{i + 1}</div>
               <div className="admin-info">
                 <div className="admin-name">{e.team_name}</div>
-                <div className="admin-menu">代表: {e.representative_name}</div>
-                <div className="admin-menu">LINE: {e.line_display_name?.trim() || '（未取得）'}</div>
+                {e.line_user_id ? (<>
+                  <div className="admin-menu">代表: {e.representative_name || '（未入力）'}</div>
+                  <div className="admin-menu">LINE: {e.line_display_name?.trim() || '（未取得）'}</div>
+                </>) : (
+                  <div className="admin-menu">管理者登録</div>
+                )}
                 {e.phone && <div className="admin-contact">{e.phone}</div>}
               </div>
               <button className="btn-cancel" onClick={() => handleCancel(e)}>
