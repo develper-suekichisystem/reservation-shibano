@@ -4,7 +4,7 @@
 // ============================================================
 import { supabase } from './supabase';
 import { entryPeriodStatus, entryStartAt, formatDateTime } from './format';
-import type { Tournament, TournamentWithCount, Entry } from '../types';
+import type { Tournament, TournamentWithCount, Entry, Score, ScoreSet } from '../types';
 
 // DB の row（description は null を取りうる）
 type TournamentRow = Omit<Tournament, 'description'> & { description: string | null };
@@ -37,11 +37,13 @@ async function withCounts(rows: TournamentRow[]): Promise<TournamentWithCount[]>
 }
 
 // ── 大会 ────────────────────────────────────────────────────
+// エントリー受付画面に出す大会（公開中かつエントリー受付ONのみ）
 export async function fetchActiveTournaments(): Promise<TournamentWithCount[]> {
   const { data, error } = await supabase
     .from('tournaments')
     .select('*')
     .eq('is_active', true)
+    .eq('entry_enabled', true)
     .order('sort_order', { ascending: true });
   if (error) throw new Error(error.message);
   return withCounts((data ?? []) as TournamentRow[]);
@@ -63,6 +65,8 @@ export interface TournamentPayload {
   venue: string;
   capacity: number;
   description: string | null;
+  courts: string[];
+  entry_enabled: boolean;
   entry_start_at: string | null;
   entry_end_at: string | null;
   entry_limit_enabled: boolean;
@@ -118,14 +122,15 @@ export async function deleteTournament(id: string): Promise<void> {
 async function loadOpenTournament(tournamentId: string) {
   const { data: tournament, error: tError } = await supabase
     .from('tournaments')
-    .select('id, capacity, event_date, entry_start_at, entry_end_at, entry_limit_enabled, fiscal_year')
+    .select('id, capacity, event_date, entry_start_at, entry_end_at, entry_limit_enabled, entry_enabled, fiscal_year')
     .eq('id', tournamentId)
     .maybeSingle();
   if (tError) throw new Error(tError.message);
   if (!tournament) throw new Error('大会が見つかりません');
   return tournament as Pick<
     Tournament,
-    'id' | 'capacity' | 'event_date' | 'entry_start_at' | 'entry_end_at' | 'entry_limit_enabled' | 'fiscal_year'
+    'id' | 'capacity' | 'event_date' | 'entry_start_at' | 'entry_end_at'
+    | 'entry_limit_enabled' | 'entry_enabled' | 'fiscal_year'
   >;
 }
 
@@ -152,6 +157,9 @@ export interface CreateEntryParams {
 
 export async function createEntry(params: CreateEntryParams): Promise<Entry> {
   const tournament = await loadOpenTournament(params.tournamentId);
+  if (!tournament.entry_enabled) {
+    throw new Error('この大会はエントリーを受け付けていません。');
+  }
 
   // 受付期間チェック
   const status = entryPeriodStatus(tournament);
@@ -279,5 +287,92 @@ export async function cancelEntry(id: string): Promise<void> {
     .from('entries')
     .update({ status: 'cancelled' })
     .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── スコア ──────────────────────────────────────────────────
+
+// 本日開催の大会（スコア登録の対象）
+export async function fetchTodayTournaments(): Promise<Tournament[]> {
+  const today = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const todayStr = `${today.getFullYear()}-${p(today.getMonth() + 1)}-${p(today.getDate())}`;
+
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('is_active', true)
+    .eq('event_date', todayStr)
+    .order('sort_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as TournamentRow[]).map(toTournament);
+}
+
+// 大会に紐づくチーム名一覧（参加者エントリー・管理者登録の両方）
+export async function fetchTeamNames(tournamentId: string): Promise<string[]> {
+  const entries = await fetchEntries(tournamentId);
+  const names = entries.map(e => e.team_name.trim()).filter(Boolean);
+  return Array.from(new Set(names));
+}
+
+export interface CreateScoreParams {
+  tournamentId: string;
+  court: string;
+  teamA: string;
+  teamB: string;
+  sets: ScoreSet[];          // 最大3セット
+  winnerTeam: string;
+  refereeTeam: string;
+  refereeName: string;
+  lineUserId: string | null;
+  lineDisplayName: string | null;
+}
+
+export async function createScore(params: CreateScoreParams): Promise<Score> {
+  const [s1, s2, s3] = [0, 1, 2].map(i => params.sets[i] ?? { a: null, b: null });
+
+  const { data, error } = await supabase
+    .from('scores')
+    .insert({
+      tournament_id: params.tournamentId,
+      court: params.court,
+      team_a: params.teamA,
+      team_b: params.teamB,
+      set1_a: s1.a, set1_b: s1.b,
+      set2_a: s2.a, set2_b: s2.b,
+      set3_a: s3.a, set3_b: s3.b,
+      winner_team: params.winnerTeam,
+      referee_team: params.refereeTeam,
+      referee_name: params.refereeName.trim(),
+      line_user_id: params.lineUserId,
+      line_display_name: params.lineDisplayName,
+      is_read: false,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Score;
+}
+
+export async function fetchScores(tournamentId: string): Promise<Score[]> {
+  const { data, error } = await supabase
+    .from('scores')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Score[];
+}
+
+export async function setScoreRead(id: string, isRead: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('scores')
+    .update({ is_read: isRead })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteScore(id: string): Promise<void> {
+  const { error } = await supabase.from('scores').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }

@@ -9,6 +9,8 @@ export interface Tournament {
   entry_start_at: string | null;   // ISO日時 / null = 即時エントリー可
   entry_end_at: string | null;     // ISO日時 / null = 開催日の1週間前まで
   entry_limit_enabled: boolean;    // true = 同一年度1アカウント1エントリー
+  entry_enabled: boolean;          // false = エントリー受付画面に表示しない
+  courts: string[];                // コート名
   is_active: boolean;
   sort_order: number;
 }
@@ -41,3 +43,27 @@ export interface EntryState {
 }
 
 export type Step = 'tournament' | 'line' | 'form' | 'confirm' | 'complete';
+
+// ── スコア ──────────────────────────────────────────────────
+export interface ScoreSet {
+  a: number | null;
+  b: number | null;
+}
+
+export interface Score {
+  id: string;
+  tournament_id: string;
+  court: string;
+  team_a: string;
+  team_b: string;
+  set1_a: number | null; set1_b: number | null;
+  set2_a: number | null; set2_b: number | null;
+  set3_a: number | null; set3_b: number | null;
+  winner_team: string;
+  referee_team: string;
+  referee_name: string;
+  line_user_id: string | null;
+  line_display_name: string | null;
+  is_read: boolean;
+  created_at: string;
+}

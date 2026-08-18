@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { EntryAdmin } from './EntryAdmin';
 import { TournamentAdmin } from './TournamentAdmin';
+import { ScoreAdmin } from './ScoreAdmin';
 import { AdminLogin, isAdminAuthenticated } from './AdminLogin';
 
-type AdminTab = 'entries' | 'tournaments';
+type AdminTab = 'entries' | 'scores' | 'tournaments';
 
 export function AdminPage() {
   const [authed, setAuthed] = useState(isAdminAuthenticated());
@@ -26,6 +27,12 @@ export function AdminPage() {
           エントリー一覧
         </button>
         <button
+          className={`admin-tab${tab === 'scores' ? ' active' : ''}`}
+          onClick={() => setTab('scores')}
+        >
+          スコア管理
+        </button>
+        <button
           className={`admin-tab${tab === 'tournaments' ? ' active' : ''}`}
           onClick={() => setTab('tournaments')}
         >
@@ -35,6 +42,7 @@ export function AdminPage() {
 
       <div className="admin-content">
         {tab === 'entries' && <EntryAdmin />}
+        {tab === 'scores' && <ScoreAdmin />}
         {tab === 'tournaments' && <TournamentAdmin />}
       </div>
     </div>

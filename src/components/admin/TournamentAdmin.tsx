@@ -9,6 +9,9 @@ import {
 } from '../../lib/format';
 import type { TournamentWithCount } from '../../types';
 
+// コート名入力の区切り（1行1コート）
+const NL = String.fromCharCode(10);
+
 const CURRENT_YEAR = String(new Date().getFullYear());
 
 const EMPTY_FORM = {
@@ -21,6 +24,8 @@ const EMPTY_FORM = {
   entry_start_at: '',      // datetime-local 値。空 = 即時エントリー可能
   entry_end_at: '',        // datetime-local 値。空 = 開催日の1週間前まで
   entry_limit_enabled: true,
+  entry_enabled: true,
+  courts: '',              // 改行区切りのコート名
   is_active: true,
 };
 
@@ -58,6 +63,8 @@ export function TournamentAdmin() {
       entry_start_at: toDateTimeLocalValue(t.entry_start_at),
       entry_end_at: toDateTimeLocalValue(t.entry_end_at),
       entry_limit_enabled: t.entry_limit_enabled,
+      entry_enabled: t.entry_enabled,
+      courts: t.courts.join(NL),
       is_active: t.is_active,
     });
     setShowForm(true);
@@ -82,6 +89,8 @@ export function TournamentAdmin() {
       entry_start_at: fromDateTimeLocalValue(form.entry_start_at),
       entry_end_at: fromDateTimeLocalValue(form.entry_end_at),
       entry_limit_enabled: form.entry_limit_enabled,
+      entry_enabled: form.entry_enabled,
+      courts: form.courts.split(NL).map(c => c.trim()).filter(Boolean),
       is_active: form.is_active,
     };
     if (editing) {
@@ -134,6 +143,11 @@ export function TournamentAdmin() {
                     {formatEventDate(t.event_date)}　{t.venue}
                   </div>
                   <div className="menu-admin-duration">
+                    エントリー受付：{t.entry_enabled ? 'あり' : 'なし'}
+                    {t.courts.length > 0 && `　コート：${t.courts.join('・')}`}
+                  </div>
+                  {t.entry_enabled && <>
+                  <div className="menu-admin-duration">
                     受付 {t.entry_start_at ? formatDateTime(t.entry_start_at) : '即時'}
                     　〜 {formatDateTime(entryEndAt(t).toISOString())}
                     {t.entry_end_at ? '' : '（開催1週間前）'}
@@ -141,6 +155,7 @@ export function TournamentAdmin() {
                   <div className="menu-admin-duration">
                     エントリー制限：{t.entry_limit_enabled ? 'あり（年度内1エントリー）' : 'なし'}
                   </div>
+                  </>}
                   <div className={`menu-admin-price${t.confirmed_count >= t.capacity ? ' full' : ''}`}>
                     申込 {t.confirmed_count}/{t.capacity}チーム
                     {t.confirmed_count >= t.capacity && '（満員）'}
@@ -226,6 +241,22 @@ export function TournamentAdmin() {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label-check">
+                <input
+                  type="checkbox"
+                  checked={form.entry_enabled}
+                  onChange={e => setForm(f => ({ ...f, entry_enabled: e.target.checked }))}
+                />
+                エントリーを受け付ける
+              </label>
+              <p className="form-hint">
+                オフにするとエントリー受付画面に表示されません（スコア収集のみ利用する大会など）。
+                チームは「エントリー一覧」タブから登録できます。
+              </p>
+            </div>
+
+            {form.entry_enabled && <>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">エントリー開始日時</label>
@@ -262,6 +293,19 @@ export function TournamentAdmin() {
                 オフの場合は、この大会に1アカウント1エントリーの制限のみが適用され、
                 他の大会には制限なくエントリーできます。
               </p>
+            </div>
+            </>}
+
+            <div className="form-group">
+              <label className="form-label">コート名</label>
+              <textarea
+                className="form-input"
+                rows={3}
+                value={form.courts}
+                onChange={e => setForm(f => ({ ...f, courts: e.target.value }))}
+                placeholder={`Aコート${NL}Bコート${NL}Cコート`}
+              />
+              <p className="form-hint">1行に1つ。スコア登録時の選択肢になります。</p>
             </div>
 
             <div className="form-group">

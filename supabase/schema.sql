@@ -18,6 +18,10 @@ CREATE TABLE tournaments (
   entry_end_at   TIMESTAMPTZ,
   -- エントリー制限（true = 同一年度1アカウント1エントリー）
   entry_limit_enabled BOOLEAN NOT NULL DEFAULT true,
+  -- エントリー受付（false = エントリー受付画面に表示しない）
+  entry_enabled BOOLEAN NOT NULL DEFAULT true,
+  -- コート名（例: {'Aコート','Bコート'}）
+  courts TEXT[] NOT NULL DEFAULT '{}',
   is_active   BOOLEAN     DEFAULT true,
   sort_order  INTEGER     DEFAULT 0,
   created_at  TIMESTAMPTZ DEFAULT NOW()
@@ -61,13 +65,41 @@ CREATE UNIQUE INDEX entries_one_per_tournament_idx
     AND line_user_id IS NOT NULL;
 
 -- ============================================================
+-- scores（提出されたスコア）
+-- チーム名は提出時点の文字列を保存する（entries が消えても結果は残す）
+-- ============================================================
+CREATE TABLE scores (
+  id                UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  tournament_id     UUID        REFERENCES tournaments(id) ON DELETE CASCADE NOT NULL,
+  court             TEXT        NOT NULL,
+  team_a            TEXT        NOT NULL,
+  team_b            TEXT        NOT NULL,
+  -- 各セットの得点（未実施セットは NULL）
+  set1_a INTEGER, set1_b INTEGER,
+  set2_a INTEGER, set2_b INTEGER,
+  set3_a INTEGER, set3_b INTEGER,
+  winner_team       TEXT        NOT NULL,
+  referee_team      TEXT        NOT NULL,
+  referee_name      TEXT        NOT NULL,
+  line_user_id      TEXT,
+  line_display_name TEXT,
+  is_read           BOOLEAN     NOT NULL DEFAULT false,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX scores_tournament_id_idx ON scores (tournament_id);
+CREATE INDEX scores_unread_idx        ON scores (tournament_id) WHERE is_read = false;
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE entries     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scores      ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "tournaments_all" ON tournaments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "entries_all"     ON entries     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "scores_all"      ON scores      FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- 初期データ（大会サンプル）— 必要に応じて編集してください
