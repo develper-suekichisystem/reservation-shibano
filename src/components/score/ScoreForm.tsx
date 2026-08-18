@@ -82,7 +82,31 @@ export function ScoreForm({ tournament, lineUserId, lineDisplayName, onBack, onD
       errs.sets = '入力したセットは両チームの得点を0以上の数値で入力してください';
     }
 
-    if (!winner) errs.winner = '勝者チームを選択してください';
+    if (!winner) {
+      errs.winner = '勝者チームを選択してください';
+    } else if (!errs.sets && !errs.teams) {
+      // 入力済みセットの取得数と勝者チームが矛盾していないか確認
+      let wonA = 0;
+      let wonB = 0;
+      let drawn = false;
+      for (const s of filled) {
+        const a = toScore(s.a)!;
+        const b = toScore(s.b)!;
+        if (a > b) wonA++;
+        else if (b > a) wonB++;
+        else drawn = true;
+      }
+      if (drawn) {
+        errs.sets = '同点のセットがあります。スコアを確認してください';
+      } else if (wonA === wonB) {
+        errs.winner = 'セットの取得数が同数です。スコアを確認してください';
+      } else {
+        const shouldWin = wonA > wonB ? teamA : teamB;
+        if (winner !== shouldWin) {
+          errs.winner = `スコアでは「${shouldWin}」が${Math.max(wonA, wonB)}-${Math.min(wonA, wonB)}で勝っています。勝者チームかスコアを確認してください`;
+        }
+      }
+    }
     if (!refereeTeam) errs.referee = '審判チームを選択してください';
     if (!refereeName.trim()) errs.refereeName = '審判担当者名を入力してください';
     return errs;
@@ -93,9 +117,26 @@ export function ScoreForm({ tournament, lineUserId, lineDisplayName, onBack, onD
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    const payload: ScoreSet[] = sets.map(s => ({ a: toScore(s.a), b: toScore(s.b) }));
+
+    // 送信前に入力内容を確認してもらう
+    const setLines = payload
+      .map((s, i) => (s.a === null && s.b === null ? null : `　第${i + 1}セット ${s.a ?? '-'} － ${s.b ?? '-'}`))
+      .filter(Boolean)
+      .join('\n');
+    const message = [
+      'この内容でスコアを送信します。よろしいですか？',
+      '',
+      `コート：${court}`,
+      `対戦：${teamA} vs ${teamB}`,
+      setLines,
+      `勝者：${winner}`,
+      `審判：${refereeTeam}（${refereeName.trim()}）`,
+    ].join('\n');
+    if (!confirm(message)) return;
+
     setSubmitting(true);
     await withLoading(async () => { try {
-      const payload: ScoreSet[] = sets.map(s => ({ a: toScore(s.a), b: toScore(s.b) }));
       await createScore({
         tournamentId: tournament.id,
         court,
