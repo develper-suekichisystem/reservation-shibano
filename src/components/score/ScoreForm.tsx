@@ -149,6 +149,24 @@ export function ScoreForm({ tournament, lineUserId, lineDisplayName, onBack, onD
         lineUserId,
         lineDisplayName,
       });
+
+      // 運営者へのメール通知（失敗してもスコア登録は成立させる）
+      fetch('/api/notify-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: tournament.id,
+          court,
+          teamA,
+          teamB,
+          sets: payload,
+          winnerTeam: winner,
+          refereeTeam,
+          refereeName: refereeName.trim(),
+          lineDisplayName,
+        }),
+      }).catch(console.error);
+
       onDone();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'スコアの送信に失敗しました');

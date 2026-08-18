@@ -99,6 +99,15 @@ export async function updateTournament(id: string, payload: TournamentPayload): 
   if (error) throw new Error(error.message);
 }
 
+// スコア通知先メールアドレスの更新（スコア管理タブから設定）
+export async function setTournamentNotifyEmails(id: string, emails: string[]): Promise<void> {
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ notify_emails: emails })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function setTournamentActive(id: string, isActive: boolean): Promise<void> {
   const { error } = await supabase
     .from('tournaments')

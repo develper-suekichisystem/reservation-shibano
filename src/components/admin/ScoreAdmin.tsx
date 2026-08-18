@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
-import { fetchAllTournaments, fetchScores, setScoreRead, deleteScore } from '../../lib/db';
+import {
+  fetchAllTournaments, fetchScores, setScoreRead, deleteScore, setTournamentNotifyEmails,
+} from '../../lib/db';
 import { formatEventDate, formatDateTime } from '../../lib/format';
 import type { TournamentWithCount, Score } from '../../types';
 
 type Filter = 'unread' | 'all';
+
+// メールアドレス入力の区切り（1行1件）
+const NL = String.fromCharCode(10);
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 // セットスコアを "21-15 / 18-21" の形に整形
 function formatSets(s: Score): string {
@@ -25,6 +34,8 @@ export function ScoreAdmin() {
   const [scores, setScores] = useState<Score[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
+  const [emails, setEmails] = useState('');
+  const [savingEmails, setSavingEmails] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -44,6 +55,34 @@ export function ScoreAdmin() {
     if (!selectedId) return;
     loadScores(selectedId);
   }, [selectedId]);
+
+  // 大会を切り替えたら通知先メールを読み込み直す
+  useEffect(() => {
+    const t = tournaments.find(x => x.id === selectedId);
+    setEmails(t ? t.notify_emails.join(NL) : '');
+  }, [selectedId, tournaments]);
+
+  async function handleSaveEmails() {
+    const list = emails.split(NL).map(e => e.trim()).filter(Boolean);
+    const invalid = list.filter(e => !isValidEmail(e));
+    if (invalid.length > 0) {
+      alert(`メールアドレスの形式が正しくありません：${NL}${invalid.join(NL)}`);
+      return;
+    }
+    setSavingEmails(true);
+    try {
+      await setTournamentNotifyEmails(selectedId, list);
+      setTournaments(prev => prev.map(t =>
+        t.id === selectedId ? { ...t, notify_emails: list } : t));
+      alert(list.length > 0
+        ? `通知先を${list.length}件保存しました。`
+        : '通知先を空にしました。スコア提出時のメール通知は行われません。');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '通知先の保存に失敗しました');
+    } finally {
+      setSavingEmails(false);
+    }
+  }
 
   async function loadScores(tournamentId: string) {
     setLoading(true);
@@ -130,6 +169,21 @@ export function ScoreAdmin() {
           </span>
         </div>
       )}
+
+      <div className="score-notify-emails">
+        <label className="form-label">運営者メールアドレス（スコア提出の通知先）</label>
+        <textarea
+          className="form-input"
+          rows={3}
+          value={emails}
+          onChange={e => setEmails(e.target.value)}
+          placeholder={`taro@example.com${NL}hanako@example.com`}
+        />
+        <p className="form-hint">1行に1つ。未設定の場合はこの大会のメール通知は行われません。</p>
+        <button className="btn-add" onClick={handleSaveEmails} disabled={savingEmails}>
+          {savingEmails ? '保存中...' : '通知先を保存'}
+        </button>
+      </div>
 
       <div className="score-filter">
         <button

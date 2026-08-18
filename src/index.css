@@ -519,6 +519,11 @@ body {
 .score-input { flex: 1; min-width: 0; text-align: center; margin: 0; }
 .score-sep { color: var(--gray-400); }
 
+.score-notify-emails { margin: 4px 16px 16px; }
+.score-notify-emails .form-input { margin-bottom: 4px; }
+.score-notify-emails .btn-add { margin-top: 4px; }
+.score-notify-emails .btn-add:disabled { opacity: 0.5; cursor: default; }
+
 .score-filter { display: flex; gap: 8px; margin: 4px 16px 12px; }
 .score-filter-btn {
   flex: 1; padding: 8px; font-size: 13px; font-family: inherit; cursor: pointer;

@@ -11,6 +11,7 @@ export interface Tournament {
   entry_limit_enabled: boolean;    // true = 同一年度1アカウント1エントリー
   entry_enabled: boolean;          // false = エントリー受付画面に表示しない
   courts: string[];                // コート名
+  notify_emails: string[];         // スコア提出時の通知先メールアドレス
   is_active: boolean;
   sort_order: number;
 }
