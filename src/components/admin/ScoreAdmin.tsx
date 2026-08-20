@@ -36,6 +36,7 @@ export function ScoreAdmin() {
   const [loading, setLoading] = useState(true);
   const [emails, setEmails] = useState('');
   const [savingEmails, setSavingEmails] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -62,6 +63,13 @@ export function ScoreAdmin() {
     setEmails(t ? t.notify_emails.join(NL) : '');
   }, [selectedId, tournaments]);
 
+  // 編集を破棄して保存済みの内容に戻す
+  function closeEmailModal() {
+    const t = tournaments.find(x => x.id === selectedId);
+    setEmails(t ? t.notify_emails.join(NL) : '');
+    setShowEmailModal(false);
+  }
+
   async function handleSaveEmails() {
     const list = emails.split(NL).map(e => e.trim()).filter(Boolean);
     const invalid = list.filter(e => !isValidEmail(e));
@@ -74,9 +82,7 @@ export function ScoreAdmin() {
       await setTournamentNotifyEmails(selectedId, list);
       setTournaments(prev => prev.map(t =>
         t.id === selectedId ? { ...t, notify_emails: list } : t));
-      alert(list.length > 0
-        ? `通知先を${list.length}件保存しました。`
-        : '通知先を空にしました。スコア提出時のメール通知は行われません。');
+      setShowEmailModal(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : '通知先の保存に失敗しました');
     } finally {
@@ -170,19 +176,12 @@ export function ScoreAdmin() {
         </div>
       )}
 
-      <div className="score-notify-emails">
-        <label className="form-label">運営者メールアドレス（スコア提出の通知先）</label>
-        <textarea
-          className="form-input"
-          rows={3}
-          value={emails}
-          onChange={e => setEmails(e.target.value)}
-          placeholder={`taro@example.com${NL}hanako@example.com`}
-        />
-        <p className="form-hint">1行に1つ。未設定の場合はこの大会のメール通知は行われません。</p>
-        <button className="btn-add" onClick={handleSaveEmails} disabled={savingEmails}>
-          {savingEmails ? '保存中...' : '通知先を保存'}
-        </button>
+      <div className="score-notify-row">
+        <span className="score-notify-summary">
+          📧 通知先 {selected?.notify_emails.length ?? 0}件
+          {(selected?.notify_emails.length ?? 0) === 0 && '（メール通知なし）'}
+        </span>
+        <button className="btn-edit" onClick={() => setShowEmailModal(true)}>設定</button>
       </div>
 
       <div className="score-filter">
@@ -239,6 +238,38 @@ export function ScoreAdmin() {
         </div>
       )}
       </>)}
+
+      {showEmailModal && (
+        <div
+          className="modal-overlay"
+          onClick={e => e.target === e.currentTarget && closeEmailModal()}
+        >
+          <div className="modal">
+            <h3 className="modal-title">運営者メールアドレス</h3>
+            <p className="form-hint">
+              {selected?.name} のスコアが提出されたときの通知先です。
+            </p>
+            <div className="form-group">
+              <textarea
+                className="form-input"
+                rows={4}
+                value={emails}
+                onChange={e => setEmails(e.target.value)}
+                placeholder={`taro@example.com${NL}hanako@example.com`}
+              />
+              <p className="form-hint">1行に1つ。空にするとこの大会のメール通知は行われません。</p>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-next" onClick={handleSaveEmails} disabled={savingEmails}>
+                {savingEmails ? '保存中...' : '保存'}
+              </button>
+              <button className="btn-back" onClick={closeEmailModal}>
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
