@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.RESEND_API_KEY;
   const {
     tournamentId, court, teamA, teamB,
-    sets, winnerTeam, refereeTeam, refereeName, lineDisplayName,
+    sets, winnerTeam, refereeTeam, refereeName,
   } = req.body as NotifyScorePayload;
 
   if (!tournamentId) {
@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ['スコア', setLines.join(' ／ ') || '（未入力）'],
     ['勝者', winnerTeam],
     ['審判', `${refereeTeam}（${refereeName}）`],
-    ['提出者', lineDisplayName || '（未取得）'],
+    ['提出者', refereeName || '（未取得）'],
   ];
 
   const text = rows.map(([label, value]) => `${label}：${value}`).join('\n');

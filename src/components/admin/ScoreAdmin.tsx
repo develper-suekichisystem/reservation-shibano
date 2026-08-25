@@ -227,7 +227,7 @@ export function ScoreAdmin() {
                 <div className="admin-menu">審判: {s.referee_team}（{s.referee_name}）</div>
                 <div className="admin-contact">
                   {formatDateTime(s.created_at)}
-                  {s.line_display_name ? `　提出: ${s.line_display_name}` : ''}
+                  {s.referee_name ? `　提出: ${s.referee_name}` : ''}
                 </div>
               </div>
               <button className="btn-cancel" onClick={() => handleDelete(s)}>
