@@ -22,8 +22,8 @@ CREATE TABLE tournaments (
   entry_enabled BOOLEAN NOT NULL DEFAULT true,
   -- コート名（例: {'Aコート','Bコート'}）
   courts TEXT[] NOT NULL DEFAULT '{}',
-  -- スコア提出時の通知先メールアドレス
-  notify_emails TEXT[] NOT NULL DEFAULT '{}',
+  -- スコア提出時の通知先メールアドレス（既定で運営共通アドレスを含む）
+  notify_emails TEXT[] NOT NULL DEFAULT '{official.oneup.group@gmail.com}',
   is_active   BOOLEAN     DEFAULT true,
   sort_order  INTEGER     DEFAULT 0,
   created_at  TIMESTAMPTZ DEFAULT NOW()

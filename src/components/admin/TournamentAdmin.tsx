@@ -25,7 +25,7 @@ const EMPTY_FORM = {
   entry_end_at: '',        // datetime-local 値。空 = 開催日の1週間前まで
   entry_limit_enabled: true,
   entry_enabled: true,
-  courts: '',              // 改行区切りのコート名
+  courts: `Aコート${NL}Bコート${NL}Cコート`,   // 改行区切りのコート名
   is_active: true,
 };
 

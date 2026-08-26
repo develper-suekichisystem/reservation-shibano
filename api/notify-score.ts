@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+// 大会設定に関わらず常に通知する運営共通アドレス（小文字で保持）
+const DEFAULT_NOTIFY_EMAIL = 'official.oneup.group@gmail.com';
+
 const RESEND_URL = 'https://api.resend.com/emails';
 
 // 送信元（Resend で認証済みのドメインのアドレス）
@@ -65,7 +68,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
 
-  const to = (tournament.notify_emails ?? []).map((a: string) => a.trim()).filter(Boolean);
+  // 大会ごとの設定に関わらず、運営共通アドレスは常に通知先へ含める
+  const configured = (tournament.notify_emails ?? []).map((a: string) => a.trim()).filter(Boolean);
+  const to = [
+    DEFAULT_NOTIFY_EMAIL,
+    ...configured.filter(a => a.toLowerCase() !== DEFAULT_NOTIFY_EMAIL),
+  ];
 
   // 通知先やAPIキーが未設定でもスコア登録自体は成功させたいので、エラーにはしない
   if (!apiKey || to.length === 0) {
